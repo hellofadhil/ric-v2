@@ -104,18 +104,18 @@
                             <tr class="hover:bg-gray-50 transition">
 
                                 <td class="px-6 py-4 font-mono text-xs text-gray-500">
-                                    <div class="truncate" title="@item.Id">@item.Id</div>
+                                    <div class="truncate" title="@item.Id">@Trunc(item.Id.ToString(), 10)</div>
                                 </td>
 
                                 <td class="px-3 py-4">
-                                    <div class="truncate font-medium text-gray-900" title="@item.Entitas">
-                                        @Trunc(item.Entitas, 48)
+                                    <div class="font-medium text-gray-900 leading-snug" title="@item.Entitas">
+                                        @Html.Raw(BreakEveryTwoWords(Trunc(item.Entitas, 80)))
                                     </div>
                                 </td>
 
                                 <td class="px-3 py-4">
-                                    <div class="truncate font-medium text-gray-900" title="@item.JudulAplikasi">
-                                        @Trunc(item.JudulAplikasi, 64)
+                                    <div class="font-medium text-gray-900 leading-snug" title="@item.JudulAplikasi">
+                                        @Html.Raw(BreakEveryTwoWords(Trunc(item.JudulAplikasi, 100)))
                                     </div>
                                 </td>
 
@@ -198,4 +198,25 @@
 
     private string GetApprovalBadgeClass(string status)
         => StatusBadgeHelper.GetStatusBadgeClass(status);
+
+    private string BreakEveryTwoWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return "-";
+
+        var words = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length <= 2)
+            return string.Join(" ", words);
+
+        var parts = new List<string>();
+        for (var i = 0; i < words.Length; i += 2)
+        {
+            if (i + 1 < words.Length)
+                parts.Add($"{words[i]} {words[i + 1]}");
+            else
+                parts.Add(words[i]);
+        }
+
+        return string.Join("<br>", parts);
+    }
 }
