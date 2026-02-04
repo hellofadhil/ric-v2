@@ -456,11 +456,23 @@ namespace OnePro.Front.Controllers.RicRollOut
         // ========= APPROVAL =========
 
         [RoleRequired(Role.User_Manager, Role.User_VP, Role.BR_Manager)]
-        [HttpGet("RicRollOut/User/Approval")]
-        public async Task<IActionResult> ApprovalIndex()
+        [HttpGet("RicRollOut/Approval")]
+        public async Task<IActionResult> ApprovalIndex(string? q, string? status)
         {
             if (!TryGetToken(out var token))
                 return RedirectToLogin();
+
+            var roleStr = HttpContext.Session.GetString("UserRole") ?? "";
+            var allowedStatuses = new List<string>();
+            if (Enum.TryParse<Role>(roleStr, ignoreCase: true, out var role))
+            {
+                if (role == Role.User_Manager)
+                    allowedStatuses.Add("Approval_Manager_User");
+                else if (role == Role.User_VP)
+                    allowedStatuses.Add("Approval_VP_User");
+                else if (role == Role.BR_Manager)
+                    allowedStatuses.Add("Approval_Manager_BR");
+            }
 
             var items = await RollOutService.GetMyRollOutsAsync(token);
 
@@ -473,11 +485,40 @@ namespace OnePro.Front.Controllers.RicRollOut
                 )
                 .ToList();
 
+            if (allowedStatuses.Count > 0)
+            {
+                approvalItems = approvalItems
+                    .Where(x => allowedStatuses.Any(s =>
+                        string.Equals(x.Status, s, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                approvalItems = approvalItems
+                    .Where(x => string.Equals(x.Status, status, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var needle = q.Trim();
+                approvalItems = approvalItems
+                    .Where(x =>
+                        x.Id.ToString().Contains(needle, StringComparison.OrdinalIgnoreCase)
+                        || (x.Entitas ?? "").Contains(needle, StringComparison.OrdinalIgnoreCase)
+                        || (x.JudulAplikasi ?? "").Contains(needle, StringComparison.OrdinalIgnoreCase)
+                        || (x.UserName ?? "").Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    )
+                    .ToList();
+            }
+
+            approvalItems = approvalItems.Take(10).ToList();
             return View(ViewApprovalIndex, approvalItems);
         }
 
         [RoleRequired(Role.User_Manager, Role.User_VP, Role.BR_Manager)]
-        [HttpGet("RicRollOut/User/Approval/{id:guid}")]
+        [HttpGet("RicRollOut/Approval/{id:guid}")]
         public async Task<IActionResult> Approval(Guid id)
         {
             if (!TryGetToken(out var token))
@@ -487,19 +528,59 @@ namespace OnePro.Front.Controllers.RicRollOut
             if (detail == null)
                 return NotFound();
 
-            var vm = new RicRollOutCreateViewModel
+            var vm = new RicRollOutDetailViewModel
             {
                 Id = detail.Id,
+
+                IdUser = detail.IdUser,
+                UserName = detail.UserName ?? "",
+                IdGroupUser = detail.IdGroupUser,
+                GroupName = detail.GroupName ?? "",
+                Status = detail.Status,
+                CreatedAt = detail.CreatedAt,
+                UpdatedAt = detail.UpdatedAt,
+
                 Entitas = detail.Entitas,
                 JudulAplikasi = detail.JudulAplikasi,
                 Hashtags = detail.Hashtag ?? new List<string>(),
+
+                ExistingCompareWithAsIsHoldingProcessFileUrls =
+                    detail.CompareWithAsIsHoldingProcessFiles ?? new List<string>(),
+                ExistingStkAsIsToBeFileUrls = detail.StkAsIsToBeFiles ?? new List<string>(),
+
+                IsJoinedDomainAdPertamina = detail.IsJoinedDomainAdPertamina,
+                IsUsingErpPertamina = detail.IsUsingErpPertamina,
+                IsImplementedRequiredActivation = detail.IsImplementedRequiredActivation,
+                HasDataCenterConnection = detail.HasDataCenterConnection,
+                HasRequiredResource = detail.HasRequiredResource,
+
+                Reviews = (detail.Reviews ?? new List<Core.Contracts.RicRollOut.Responses.RicRollOutReviewResponse>())
+                    .Select(r => new RicRollOutReviewItemViewModel
+                    {
+                        UserName = r.UserName,
+                        RoleReview = r.RoleReview,
+                        CreatedAt = r.CreatedAt,
+                        Catatan = r.Catatan
+                    })
+                    .ToList(),
+                Histories = (detail.Histories ?? new List<Core.Contracts.RicRollOut.Responses.RicRollOutHistoryResponse>())
+                    .Select(h => new RicRollOutHistoryItemViewModel
+                    {
+                        Id = h.Id,
+                        Version = h.Version,
+                        Snapshot = h.Snapshot,
+                        EditedFields = h.EditedFields,
+                        EditorName = h.EditorName,
+                        CreatedAt = h.CreatedAt
+                    })
+                    .ToList(),
             };
 
             return View(ViewApprovalDetail, vm);
         }
 
         [RoleRequired(Role.User_Manager, Role.User_VP, Role.BR_Manager)]
-        [HttpPost("RicRollOut/User/Approval/{id:guid}/approve")]
+        [HttpPost("RicRollOut/Approval/{id:guid}/approve")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ApproveAction(Guid id)
         {
@@ -516,6 +597,39 @@ namespace OnePro.Front.Controllers.RicRollOut
 
             TempData["SuccessMessage"] = "RollOut berhasil di-approve.";
             return RedirectToAction(nameof(Approval), new { id });
+        }
+
+        [RoleRequired(Role.User_Manager, Role.User_VP, Role.BR_Manager)]
+        [HttpGet("RicRollOut/Approval/History/{id:guid}/{historyId:guid}")]
+        public async Task<IActionResult> ApprovalHistoryCompare(Guid id, Guid historyId)
+        {
+            if (!TryGetToken(out var token))
+                return RedirectToLogin();
+
+            var detail = await RollOutService.GetDetailByIdAsync(id, token);
+            if (detail == null)
+                return NotFound();
+
+            var histories = detail.Histories ?? new List<Core.Contracts.RicRollOut.Responses.RicRollOutHistoryResponse>();
+            var current = histories.FirstOrDefault(h => h.Id == historyId);
+            if (current == null)
+                return NotFound();
+
+            var ordered = histories.OrderBy(h => h.Version).ToList();
+            var idx = ordered.FindIndex(h => h.Id == historyId);
+            var prev = idx > 0 ? ordered[idx - 1] : null;
+
+            var vm = new OnePro.Front.ViewModels.RicRollOut.RicRollOutHistoryCompareViewModel
+            {
+                RollOutId = detail.Id,
+                Current = current,
+                Previous = prev,
+                Title = "RIC RollOut History Compare",
+                BackUrl = Url.Action(nameof(ApprovalIndex)) ?? "/RicRollOut/Approval"
+            };
+
+            ViewBag.FileBase = "/RicRollOut/User/Files";
+            return View("~/Views/RicRollOut/HistoryCompare.cshtml", vm);
         }
 
         [RoleRequired(Role.User_Member, Role.User_Pic, Role.User_Manager, Role.User_VP)]

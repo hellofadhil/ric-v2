@@ -1,0 +1,372 @@
+@using System.Linq
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Html
+@using OnePro.Front.ViewModels.RicRollOut
+
+@model OnePro.Front.ViewModels.RicRollOut.RicRollOutDetailViewModel
+
+@{
+    ViewData["Title"] = "RIC RollOut Approval Detail";
+    Layout = "_LayoutDashboard";
+
+    string SafeText(string? v) => string.IsNullOrWhiteSpace(v) ? "-" : v!;
+}
+
+<div class="min-h-screen bg-slate-50">
+    <div class="max-w-7xl mx-auto px-2 sm:px-2 py-4">
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- MAIN CONTENT -->
+            <div class="lg:col-span-8 space-y-4">
+
+                <!-- Header -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div>
+                            <h1 class="text-base sm:text-lg font-semibold text-slate-900">Approval RollOut</h1>
+                            <p class="mt-1 text-xs text-slate-500">
+                                Cek detail RollOut. Kalau udah aman, approve.
+                            </p>
+                        </div>
+
+                        <a asp-action="ApprovalIndex"
+                           class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-[11px]">
+                                <-
+                            </span>
+                            Kembali
+                        </a>
+                    </div>
+                </div>
+
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="rounded-xl border border-emerald-100 bg-emerald-50 px-6 py-4 text-sm text-emerald-700">
+                        OK: @TempData["SuccessMessage"]
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="rounded-xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-700">
+                        WARN: @TempData["ErrorMessage"]
+                    </div>
+                }
+
+                <!-- Entitas -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-800">Entitas</h2>
+                        <p class="mt-1 text-xs text-slate-500">Entitas pengaju RollOut (read-only).</p>
+                    </div>
+                    <div class="px-6 py-4">
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+                            @SafeText(Model.Entitas)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Judul Aplikasi -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-800">Judul Aplikasi</h2>
+                        <p class="mt-1 text-xs text-slate-500">Nama aplikasi / sistem (read-only).</p>
+                    </div>
+                    <div class="px-6 py-4">
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+                            @SafeText(Model.JudulAplikasi)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hashtag -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-800">Hashtag</h2>
+                        <p class="mt-1 text-xs text-slate-500">Label pengelompokan RollOut (read-only).</p>
+                    </div>
+                    <div class="px-6 py-4">
+                        @if (Model.Hashtags != null && Model.Hashtags.Any())
+                        {
+                            <div class="flex flex-wrap gap-2">
+                                @foreach (var tag in Model.Hashtags)
+                                {
+                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 border border-indigo-100">
+                                        #@tag
+                                    </span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                Belum ada hashtag.
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Compare files -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-800">Compare With As-Is Holding Process</h2>
+                        <p class="mt-1 text-xs text-slate-500">Dokumen pembanding proses holding (read-only).</p>
+                    </div>
+                    <div class="px-6 py-4">
+                        @if (Model.ExistingCompareWithAsIsHoldingProcessFileUrls != null && Model.ExistingCompareWithAsIsHoldingProcessFileUrls.Any())
+                        {
+                            <a href="@($"/RicRollOut/User/Files/{Model.Id}/compare")"
+                               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                                <i class="ri-download-2-line"></i>
+                                Download all files (@Model.ExistingCompareWithAsIsHoldingProcessFileUrls.Count)
+                            </a>
+                        }
+                        else
+                        {
+                            <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                Tidak ada file.
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- STK files -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-800">STK As-Is To-Be</h2>
+                        <p class="mt-1 text-xs text-slate-500">Dokumen STK as-is & to-be (read-only).</p>
+                    </div>
+                    <div class="px-6 py-4">
+                        @if (Model.ExistingStkAsIsToBeFileUrls != null && Model.ExistingStkAsIsToBeFileUrls.Any())
+                        {
+                            <a href="@($"/RicRollOut/User/Files/{Model.Id}/stk")"
+                               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                                <i class="ri-download-2-line"></i>
+                                Download all files (@Model.ExistingStkAsIsToBeFileUrls.Count)
+                            </a>
+                        }
+                        else
+                        {
+                            <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                Tidak ada file.
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Checklist -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-800">Checklist Readiness</h2>
+                        <p class="mt-1 text-xs text-slate-500">Status readiness RollOut.</p>
+                    </div>
+                    <div class="px-6 py-4 space-y-2">
+                        @ChecklistRow("Sudah join domain AD Pertamina", Model.IsJoinedDomainAdPertamina)
+                        @ChecklistRow("Menggunakan ERP Pertamina", Model.IsUsingErpPertamina)
+                        @ChecklistRow("Required activation sudah diimplementasikan", Model.IsImplementedRequiredActivation)
+                        @ChecklistRow("Ada koneksi ke Data Center", Model.HasDataCenterConnection)
+                        @ChecklistRow("Resource sudah tersedia", Model.HasRequiredResource)
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex flex-col gap-4 border-t border-slate-100 bg-white px-8 py-4 sm:flex-row sm:items-center sm:justify-between rounded-xl">
+                    <a asp-action="ApprovalIndex"
+                       class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700">
+                        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-[11px]">
+                            <-
+                        </span>
+                        Kembali
+                    </a>
+
+                    <div class="flex items-center gap-3">
+                        <button type="button"
+                                id="open-approve-modal"
+                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl
+                                       bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition">
+                            <i class="ri-check-line text-lg"></i>
+                            Approve
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDEBAR -->
+            <aside class="lg:col-span-4 space-y-4 lg:sticky lg:top-6 h-fit">
+
+                <!-- Reviews -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-800">Reviews</h2>
+                        <p class="mt-1 text-xs text-slate-500">Catatan reviewer untuk RollOut ini.</p>
+                    </div>
+
+                    <div class="px-6 py-4">
+                        @if (Model.Reviews != null && Model.Reviews.Any())
+                        {
+                            <div class="space-y-3">
+                                @foreach (var rv in Model.Reviews.OrderByDescending(x => x.CreatedAt))
+                                {
+                                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="text-sm font-semibold text-slate-800">
+                                                        @(string.IsNullOrWhiteSpace(rv.UserName) ? "Reviewer" : rv.UserName)
+                                                    </span>
+
+                                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 border border-indigo-100">
+                                                        @rv.RoleReview
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div class="shrink-0 text-right text-[11px] text-slate-500">
+                                                @rv.CreatedAt.ToString("dd MMM yyyy, HH:mm")
+                                            </div>
+                                        </div>
+
+                                        <p class="mt-3 text-sm text-slate-700 w-full break-words whitespace-pre-line">
+                                            @(string.IsNullOrWhiteSpace(rv.Catatan) ? "-" : rv.Catatan)
+                                        </p>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                                Belum ada review untuk RollOut ini.
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div class="rounded-xl bg-white shadow-sm border border-slate-100">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-800">History</h2>
+                        <p class="mt-1 text-xs text-slate-500">Riwayat perubahan RollOut (ringkas).</p>
+                    </div>
+
+                    <div class="px-6 py-4">
+                        @if (Model.Histories != null && Model.Histories.Any())
+                        {
+                            <ul class="space-y-2">
+                                @foreach (var h in Model.Histories.OrderByDescending(x => x.CreatedAt))
+                                {
+                                    <li class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <div class="text-sm font-semibold text-slate-800">
+                                                    Version @h.Version
+                                                </div>
+                                                <div class="mt-0.5 text-xs text-slate-600">
+                                                    @(string.IsNullOrWhiteSpace(h.EditorName) ? "Unknown" : h.EditorName)
+                                                </div>
+                                            </div>
+
+                                            <div class="shrink-0 text-right text-[11px] text-slate-500">
+                                                @h.CreatedAt.ToString("dd MMM yyyy, HH:mm")
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <a href="@($"/RicRollOut/Approval/History/{Model.Id}/{h.Id}")"
+                                               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+                                                <i class="ri-contrast-2-line"></i>
+                                                Compare
+                                            </a>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                                Belum ada history untuk RollOut ini.
+                            </div>
+                        }
+                    </div>
+                </div>
+
+            </aside>
+        </div>
+    </div>
+</div>
+
+<!-- APPROVE MODAL -->
+<div id="approve-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-100">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h3 class="text-base font-semibold text-slate-900">Konfirmasi Approve</h3>
+                <p class="mt-1 text-xs text-slate-500">Yakin mau approve RollOut ini?</p>
+            </div>
+            <div class="px-6 py-4 text-sm text-slate-700">
+                Tindakan ini akan melanjutkan proses approval sesuai alur yang berlaku.
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button type="button" id="cancel-approve"
+                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+                    Batal
+                </button>
+                <form asp-controller="RicRollOutUser" asp-action="ApproveAction" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="Id" type="hidden" />
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition">
+                        <i class="ri-check-line"></i>
+                        Ya, Approve
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const openBtn = document.getElementById('open-approve-modal');
+            const modal = document.getElementById('approve-modal');
+            const cancelBtn = document.getElementById('cancel-approve');
+
+            if (!openBtn || !modal) return;
+
+            const close = () => modal.classList.add('hidden');
+            const open = () => modal.classList.remove('hidden');
+
+            openBtn.addEventListener('click', open);
+            cancelBtn?.addEventListener('click', close);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal || e.target === modal.firstElementChild) close();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') close();
+            });
+        })();
+    </script>
+}
+
+@functions {
+    private IHtmlContent ChecklistRow(string label, bool value)
+    {
+        var badge = value
+            ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+            : "bg-red-100 text-red-700 border border-red-200";
+        var text = value ? "Yes" : "No";
+
+        var html =
+$@"
+<div class='flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm'>
+  <div class='text-slate-700'>{label}</div>
+  <span class='inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {badge}'>
+    {text}
+  </span>
+</div>";
+
+        return new HtmlString(html);
+    }
+}
